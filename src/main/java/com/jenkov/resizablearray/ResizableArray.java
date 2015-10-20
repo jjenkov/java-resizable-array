@@ -9,14 +9,10 @@ public class ResizableArray {
 
     private ResizableArrayBuffer resizableArrayBuffer = null;
 
-    public long sourceSocketId = 0;
-
     public byte[] sharedArray = null;
     public int    offset      = 0; //offset into sharedArray where this message data starts.
     public int    capacity    = 0; //the size of the section in the sharedArray allocated to this message.
     public int    length      = 0; //the number of bytes used of the allocated section.
-
-    public Object metaData    = null;
 
     public ResizableArray(ResizableArrayBuffer resizableArrayBuffer) {
         this.resizableArrayBuffer = resizableArrayBuffer;
@@ -43,6 +39,10 @@ public class ResizableArray {
         this.length += bytesToCopy;
 
         return bytesToCopy;
+    }
+
+    public void free() {
+        this.resizableArrayBuffer.free(this);
     }
 
 

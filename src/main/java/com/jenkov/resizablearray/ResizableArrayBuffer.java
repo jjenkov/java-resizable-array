@@ -104,6 +104,17 @@ public class ResizableArrayBuffer {
     }
 
 
+    public void free(ResizableArray resizableArray){
+        if(resizableArray.capacity == smallBlockSize){
+            this.smallFreeBlocks.put(resizableArray.offset);
+        } else if(resizableArray.capacity == mediumBlockSize){
+            this.mediumFreeBlocks.put(resizableArray.offset);
+        } else {
+            this.largeFreeBlocks.put(resizableArray.offset);
+        }
+    }
+
+
 
 
 
