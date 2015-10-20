@@ -13,44 +13,66 @@ public class ResizableArrayBuffer {
     public static int KB = 1024;
     public static int MB = 1024 * KB;
 
-    private static final int CAPACITY_SMALL  =   4  * KB;
-    private static final int CAPACITY_MEDIUM = 128  * KB;
-    private static final int CAPACITY_LARGE  = 1024 * KB;
 
     //package scope (default) - so they can be accessed from unit tests.
-    byte[]  smallMessageBuffer  = new byte[1024 *   4 * KB];   //1024 x   4KB messages =  4MB.
-    byte[]  mediumMessageBuffer = new byte[128  * 128 * KB];   // 128 x 128KB messages = 16MB.
-    byte[]  largeMessageBuffer  = new byte[16   *   1 * MB];   //  16 *   1MB messages = 16MB.
+    byte[] sharedArray = null;
 
-    QueueIntFlip smallMessageBufferFreeBlocks  = new QueueIntFlip(1024); // 1024 free sections
-    QueueIntFlip mediumMessageBufferFreeBlocks = new QueueIntFlip(128);  // 128  free sections
-    QueueIntFlip largeMessageBufferFreeBlocks  = new QueueIntFlip(16);   // 16   free sections
+    private int capacity = 0;
 
-    //todo make all message buffer capacities and block sizes configurable
-    //todo calculate free block queue sizes based on capacity and block size of buffers.
+    private int smallBlockSize  = 0;
+    private int mediumBlockSize = 0;
+    private int largeBlockSize  = 0;
 
-    public ResizableArrayBuffer() {
+    private int smallBlockCount  = 0;
+    private int mediumBlockCount = 0;
+    private int largeBlockCount  = 0;
+
+
+    QueueIntFlip smallFreeBlocks  = null;
+    QueueIntFlip mediumFreeBlocks = null;
+    QueueIntFlip largeFreeBlocks  = null;
+
+    public ResizableArrayBuffer(int smallBlockSize, int smallBlockCount, int mediumBlockSize, int mediumBlockCount, int largeBlockSize, int largeBlockCount) {
+        this.capacity = smallBlockSize * smallBlockCount + mediumBlockSize * mediumBlockCount + largeBlockSize * largeBlockCount;
+        this.sharedArray = new byte[this.capacity];
+
+        this.smallBlockSize   = smallBlockSize;
+        this.smallBlockCount  = smallBlockCount;
+        this.mediumBlockSize  = mediumBlockSize;
+        this.mediumBlockCount = mediumBlockCount;
+        this.largeBlockSize   = largeBlockSize;
+        this.largeBlockCount  = largeBlockCount;
+
+        this.smallFreeBlocks  = new QueueIntFlip(smallBlockCount);
+        this.mediumFreeBlocks = new QueueIntFlip(mediumBlockCount);
+        this.largeFreeBlocks  = new QueueIntFlip(largeBlockCount);
+
         //add all free sections to all free section queues.
-        for(int i=0; i<smallMessageBuffer.length; i+= CAPACITY_SMALL){
-            this.smallMessageBufferFreeBlocks.put(i);
+        int smallBlocksEndIndex   = smallBlockSize * smallBlockCount;
+        for(int i=0; i<smallBlocksEndIndex; i+= smallBlockSize){
+            this.smallFreeBlocks.put(i);
         }
-        for(int i=0; i<mediumMessageBuffer.length; i+= CAPACITY_MEDIUM){
-            this.mediumMessageBufferFreeBlocks.put(i);
+        int mediumBlocksStartIndex = smallBlockCount * smallBlockSize;
+        int mediumBlocksEndIndex   = mediumBlocksStartIndex + mediumBlockSize * mediumBlockCount;
+        for(int i=mediumBlocksStartIndex; i<mediumBlocksEndIndex; i+= mediumBlockSize){
+            this.mediumFreeBlocks.put(i);
         }
-        for(int i=0; i<largeMessageBuffer.length; i+= CAPACITY_LARGE){
-            this.largeMessageBufferFreeBlocks.put(i);
+        int largeBlocksStartIndex = mediumBlocksEndIndex;
+        int largeBlocksEndIndex   = largeBlocksStartIndex + largeBlockSize * largeBlockCount;
+        for(int i=largeBlocksStartIndex; i<largeBlocksEndIndex; i+= largeBlockSize){
+            this.largeFreeBlocks.put(i);
         }
     }
 
     public ResizableArray getArray() {
-        int nextFreeSmallBlock = this.smallMessageBufferFreeBlocks.take();
+        int nextFreeSmallBlock = this.smallFreeBlocks.take();
 
         if(nextFreeSmallBlock == -1) return null;
 
         ResizableArray resizableArray = new ResizableArray(this);       //todo get from Message pool - caps memory usage.
 
-        resizableArray.sharedArray = this.smallMessageBuffer;
-        resizableArray.capacity    = CAPACITY_SMALL;
+        resizableArray.sharedArray = this.sharedArray;
+        resizableArray.capacity    = smallBlockSize;
         resizableArray.offset      = nextFreeSmallBlock;
         resizableArray.length      = 0;
 
@@ -58,24 +80,24 @@ public class ResizableArrayBuffer {
     }
 
     public boolean expandArray(ResizableArray resizableArray){
-        if(resizableArray.capacity == CAPACITY_SMALL){
-            return moveArray(resizableArray, this.smallMessageBufferFreeBlocks, this.mediumMessageBufferFreeBlocks, this.mediumMessageBuffer, CAPACITY_MEDIUM);
-        } else if(resizableArray.capacity == CAPACITY_MEDIUM){
-            return moveArray(resizableArray, this.mediumMessageBufferFreeBlocks, this.largeMessageBufferFreeBlocks, this.largeMessageBuffer, CAPACITY_LARGE);
+        if(resizableArray.capacity == smallBlockSize){
+            return moveArray(resizableArray, this.smallFreeBlocks, this.mediumFreeBlocks, mediumBlockSize);
+        } else if(resizableArray.capacity == mediumBlockSize){
+            return moveArray(resizableArray, this.mediumFreeBlocks, this.largeFreeBlocks, largeBlockSize);
         } else {
             return false;
         }
     }
 
-    private boolean moveArray(ResizableArray resizableArray, QueueIntFlip srcBlockQueue, QueueIntFlip destBlockQueue, byte[] dest, int newCapacity) {
+    private boolean moveArray(ResizableArray resizableArray, QueueIntFlip srcBlockQueue, QueueIntFlip destBlockQueue, int newCapacity) {
         int nextFreeBlock = destBlockQueue.take();
         if(nextFreeBlock == -1) return false;
 
-        System.arraycopy(resizableArray.sharedArray, resizableArray.offset, dest, nextFreeBlock, resizableArray.length);
+        System.arraycopy(this.sharedArray, resizableArray.offset, this.sharedArray, nextFreeBlock, resizableArray.length);
 
         srcBlockQueue.put(resizableArray.offset); //free smaller block after copy
 
-        resizableArray.sharedArray = dest;
+        resizableArray.sharedArray = this.sharedArray;
         resizableArray.offset      = nextFreeBlock;
         resizableArray.capacity    = newCapacity;
         return true;

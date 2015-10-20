@@ -45,16 +45,6 @@ public class ResizableArray {
         return bytesToCopy;
     }
 
-    public void writePartialMessageToMessage(ResizableArray resizableArray, int endIndex){
-        int startIndexOfPartialMessage = resizableArray.offset + endIndex;
-        int lengthOfPartialMessage     = (resizableArray.offset + resizableArray.length) - endIndex;
-
-        System.arraycopy(resizableArray.sharedArray, startIndexOfPartialMessage, this.sharedArray, this.offset, lengthOfPartialMessage);
-    }
-
-    public int writeToByteBuffer(ByteBuffer byteBuffer){
-        return 0;
-    }
 
 
 

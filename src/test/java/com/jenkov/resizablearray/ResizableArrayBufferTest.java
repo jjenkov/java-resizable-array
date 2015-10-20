@@ -12,7 +12,7 @@ public class ResizableArrayBufferTest {
     @Test
     public void testGetMessage() {
 
-        ResizableArrayBuffer resizableArrayBuffer = new ResizableArrayBuffer();
+        ResizableArrayBuffer resizableArrayBuffer = new ResizableArrayBuffer(4 * 1024, 2, 128 * 1024, 10, 1024 * 1024, 1);
 
         ResizableArray resizableArray = resizableArrayBuffer.getArray();
 
@@ -29,17 +29,16 @@ public class ResizableArrayBufferTest {
         assertEquals(4 * 1024, resizableArray2.capacity);
 
         //todo test what happens if the small buffer space is depleted of messages.
+        assertNull(resizableArrayBuffer.getArray());
 
     }
 
 
     @Test
     public void testExpandMessage(){
-        ResizableArrayBuffer resizableArrayBuffer = new ResizableArrayBuffer();
+        ResizableArrayBuffer resizableArrayBuffer = new ResizableArrayBuffer(4 * 1024, 10, 128 * 1024, 10, 1024 * 1024, 1);
 
         ResizableArray resizableArray = resizableArrayBuffer.getArray();
-
-        byte[] smallSharedArray = resizableArray.sharedArray;
 
         assertNotNull(resizableArray);
         assertEquals(0       , resizableArray.offset);
@@ -47,28 +46,20 @@ public class ResizableArrayBufferTest {
         assertEquals(4 * 1024, resizableArray.capacity);
 
         resizableArrayBuffer.expandArray(resizableArray);
-        assertEquals(0         , resizableArray.offset);
+        assertEquals(40960     , resizableArray.offset);
         assertEquals(0         , resizableArray.length);
         assertEquals(128 * 1024, resizableArray.capacity);
 
-        byte[] mediumSharedArray = resizableArray.sharedArray;
-        assertNotSame(smallSharedArray, mediumSharedArray);
-
         resizableArrayBuffer.expandArray(resizableArray);
-        assertEquals(0          , resizableArray.offset);
+        assertEquals(1351680    , resizableArray.offset);
         assertEquals(0          , resizableArray.length);
         assertEquals(1024 * 1024, resizableArray.capacity);
-
-        byte[] largeSharedArray = resizableArray.sharedArray;
-        assertNotSame(smallSharedArray, largeSharedArray);
-        assertNotSame(mediumSharedArray, largeSharedArray);
 
         //next expansion should not be possible.
         assertFalse(resizableArrayBuffer.expandArray(resizableArray));
-        assertEquals(0          , resizableArray.offset);
+        assertEquals(1351680    , resizableArray.offset);
         assertEquals(0          , resizableArray.length);
         assertEquals(1024 * 1024, resizableArray.capacity);
-        assertSame(resizableArray.sharedArray, largeSharedArray);
 
 
 

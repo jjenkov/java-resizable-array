@@ -16,7 +16,7 @@ public class ResizableArrayTest {
 
     @Test
     public void testWriteToMessage() {
-        ResizableArrayBuffer resizableArrayBuffer = new ResizableArrayBuffer();
+        ResizableArrayBuffer resizableArrayBuffer = new ResizableArrayBuffer(4 * 1024, 10, 128 * 1024, 10, 1024 * 1024, 1);
 
         ResizableArray resizableArray = resizableArrayBuffer.getArray();
         ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 1024);
@@ -26,19 +26,16 @@ public class ResizableArrayTest {
         int written = resizableArray.writeToMessage(byteBuffer);
         assertEquals(4096, written);
         assertEquals(4096, resizableArray.length);
-        assertSame(resizableArrayBuffer.smallMessageBuffer, resizableArray.sharedArray);
 
         fill(byteBuffer, 124 * 1024);
         written = resizableArray.writeToMessage(byteBuffer);
         assertEquals(124 * 1024, written);
         assertEquals(128 * 1024, resizableArray.length);
-        assertSame(resizableArrayBuffer.mediumMessageBuffer, resizableArray.sharedArray);
 
         fill(byteBuffer, (1024-128) * 1024);
         written = resizableArray.writeToMessage(byteBuffer);
         assertEquals(896  * 1024, written);
         assertEquals(1024 * 1024, resizableArray.length);
-        assertSame(resizableArrayBuffer.largeMessageBuffer, resizableArray.sharedArray);
 
         fill(byteBuffer, 1);
         written = resizableArray.writeToMessage(byteBuffer);
