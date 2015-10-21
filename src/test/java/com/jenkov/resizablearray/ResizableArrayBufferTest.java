@@ -16,7 +16,7 @@ public class ResizableArrayBufferTest {
         int mediumBlockSize =  128 * 1024;
         int largeBlockSize  = 1024 * 1024;
 
-        int smallBlockCount  = 1024;
+        int smallBlockCount  =    2;
         int mediumBlockCount =   32;
         int largeBlockCount  =    4;
 
