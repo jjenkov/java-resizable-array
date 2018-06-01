@@ -34,8 +34,8 @@ public class ResizableArray {
             }
         }
 
-        int bytesToCopy = Math.min(remaining, this.capacity - this.length);
-        byteBuffer.get(this.sharedArray, this.offset + this.length, bytesToCopy);
+        
+        byteBuffer.get(this.sharedArray, this.offset + this.length, remaining);
         this.length += bytesToCopy;
 
         return bytesToCopy;
